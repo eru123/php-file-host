@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <link rel="icon" href="img/game_item_default.png" />
+    <link rel="stylesheet" href="css/vuetify-gfont.css" />
+    <link rel="stylesheet" href="css/materialdesignicons.min.css" />
+    <link rel="stylesheet" href="css/vuetify.min.css" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, minimal-ui"
+    />
+    <meta property="og:title" content="Red Mantis Portal" />
+    <meta property="og:locale" content="en_US" />
+    <meta
+      name="description"
+      content="Free Web Services, Informations, Medias and Entertainment all in one Application without annoying Ads"
+    />
+    <meta
+      property="og:description"
+      content="Free Web Services, Informations, Medias and Entertainment all in one Application without annoying Ads"
+    />
+    <link rel="canonical" href="https://eru123.github.io/" />
+    <meta property="og:url" content="https://eru123.github.io/" />
+    <meta property="og:site_name" content="Red Mantis Portal" />
+    <meta name="twitter:card" content="summary" />
+    <meta property="twitter:title" content="Red Mantis Portal" />
+    <meta name="twitter:site" content="@EruRoraito9" />
+    <title>Manga Reader</title>
+    <style>
+      * {
+        -webkit-touch-callout: none;
+        -webkit-user-select: none;
+        -khtml-user-select: none;
+        -moz-user-select: none;
+        -ms-user-select: none;
+        user-select: none;
+      }
+      h1,
+      h2,
+      h3,
+      h4,
+      h5,
+      h6 {
+        color: #333;
+      }
+    </style>
+  </head>
+  <body background-color="#fff">
+    <div id="app">
+      <form action="uploader.php" method="post" enctype="multipart/form-data" v-if="error">
+        <input type="file" name="file">
+        <input type="submit" value="Upload">
+      </form>
+      <router-view v-if="!error"></router-view>
+    </div>
+
+    <script type="text/x-template" id="main">
+      <v-app>
+
+        <v-app-bar app color="primary" dark elevate-on-scroll elevation="6">
+          <v-toolbar-title>Uploader</v-toolbar-title>
+        </v-app-bar>
+        <v-main>
+          <router-view></router-view>
+        </v-main>
+      </v-app>
+    </script>
+
+    <script type="text/x-template" id="uploader">
+      <div>
+        <v-card max-width="600" class="mx-auto my-4">
+          <v-card-text>
+            <v-card-title>File Upload</v-card-title>
+            <v-file-input accept="*/*" label="File input" @change="updateRaw" ></v-file-input>
+             <div class="text-center my-4" v-if="raw">
+              <v-btn color="primary" @click="upload">Upload</v-btn>
+             </div>
+
+             <div class="text-left m-4 p-4" v-if="error" color="#ccc">
+                {{error}}
+              </div>
+
+            <div class="text-center" v-if="progress > 0">
+              <v-progress-linear
+                :rotate="-90"
+                :size="100"
+                :height="25"
+                :value="progress"
+                :color="(progress < 40) ? 'red' : (progress < 80 ? 'blue' : 'success')"
+              >
+                {{ progress }}%
+              </v-progress-linear>
+            </div>
+          </v-card-text>
+        </v-card>
+        <v-card v-if="files.length > 0"  max-width="600" class="mx-auto my-4" elevation="0">
+          <v-subheader>Files</v-subheader>
+          <v-list>
+            <v-list-item v-for="(f,i) in files" :key="i">
+              <v-list-item-avatar>
+                <v-avatar  color="teal"  size="48" >
+                  <span class="white--text headline">{{i + 1}}</span>
+                </v-avatar>
+              </v-list-item-avatar>
+              <v-list-item-content>
+                <v-list-item-title v-text="f"></v-list-item-title>
+              </v-list-item-content>
+              <v-list-item-action>
+                <v-btn icon link :href="'dl.php?f=' + f" target="_blank" download>
+                  <v-icon >mdi-download</v-icon>
+                </v-btn>
+              </v-list-item-action>
+            </v-list-item>
+          </v-list>
+        </v-card>
+      </div>
+    </script>
+
+    <!-- Production -->
+    <!-- <script src="js/vue.min.js"></script> -->
+
+    <!-- Development -->
+    <script src="js/dev-vue.js"></script>
+
+    <script src="js/vue-router.js"></script>
+    <script src="js/vuex.js"></script>
+    <script src="js/vuetify.js"></script>
+    <script src="js/axios.min.js"></script>
+    <script>
+      const bus = new Vue()
+
+      const error = {
+        cors : "Please check your internet connection and make sure have CORS enabled "
+      }
+
+      Vue.use(Vuetify);
+
+
+      const routes = [
+        {
+          path: "",
+          redirect:"/app",
+        },
+        { 
+          path: "/app",
+          component: {
+            template: "#main",
+            data(){
+              return {
+                drawer: null
+              }
+            },
+            created(){
+              console.log("app ready")
+            }
+          },
+          children: [
+            {
+              name: "Uploader",
+              path: "",
+              alias: "upload",
+              component: {
+                template: "#uploader",
+                data() {
+                 return {
+                  raw: null,
+                   progress: 0,
+                   error: "",
+                   files: []
+                 }
+                },
+                created() {
+                  this.view()
+                  bus.$on('uploadProgress',(value) => {
+                    this.progress = value || 0
+                  })
+                },
+                methods: {
+                  upload(){
+                    if (this.raw !== null) {
+                      console.log("uploading . . .")
+                      
+                      if (typeof this.raw.name != "undefined") {
+                        var fd = new FormData()
+                        fd.append('file',this.raw, this.raw.name)
+
+                        axios.post("uploader.php",fd,{
+                          onUploadProgress: function(e){
+                            var progress = Math.round(e.loaded/e.total * 100)
+                            bus.$emit('uploadProgress',progress)
+                          }
+                        })
+                          .then(e => {
+                            if (e.data && e.data.message) {
+                              this.error = e.data.message
+                            } else {
+                              this.error = e.data
+                            }
+                            console.log(e)
+                          })
+                          .catch(e => {
+                            console.log(e)
+                          })
+                      }
+                    }
+                  },
+                  updateRaw(e){
+                    this.raw = e
+                  },
+                  view(){
+                    axios.get("view.php")
+                      .then(e => {
+                        this.files = e.data
+                      })
+                  }
+                }
+              }              
+            }
+          ]
+        }
+      ]
+      const router = new VueRouter({ routes: routes });
+
+      const app = new Vue({
+        el: "#app",
+        data(){
+          return {
+            error: ""
+          }
+        },
+        created(){
+          console.log("running")
+        },
+        router,
+        vuetify: new Vuetify({}),
+      });
+    </script>
+  </body>
+</html>
